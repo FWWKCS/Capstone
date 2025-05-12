@@ -3,21 +3,21 @@
 # Get latest from https://github.com/github/gitignore/blob/main/Unity.gitignore
 #
 .utmp/
-/[Ll]ibrary/
-/[Tt]emp/
-/[Oo]bj/
-/[Bb]uild/
-/[Bb]uilds/
-/[Ll]ogs/
-/[Uu]ser[Ss]ettings/
+DBTest/[Ll]ibrary/
+DBTest/[Tt]emp/
+DBTest/[Oo]bj/
+DBTest/[Bb]uild/
+DBTest/[Bb]uilds/
+DBTest/[Ll]ogs/
+DBTest/[Uu]ser[Ss]ettings/
 *.log
 
 # MemoryCaptures can get excessive in size.
 # They also could contain extremely sensitive data
-/[Mm]emoryCaptures/
+DBTest/[Mm]emoryCaptures/
 
 # Recordings can get excessive in size
-/[Rr]ecordings/
+DBTest/[Rr]ecordings/
 
 # Uncomment this line if you wish to ignore the asset store tools plugin
 # /[Aa]ssets/AssetStoreTools*
@@ -73,3 +73,13 @@ crashlytics-build.properties
 # Temporary auto-generated Android Assets
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*
+
+
+
+# personal key
+config.py
+
+# DB optional
+migrations/
+venv/
+__pycache__/
