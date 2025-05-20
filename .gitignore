@@ -83,3 +83,11 @@ config.py
 migrations/
 venv/
 __pycache__/
+
+# meshroom process
+meshroomProcess/*.spec
+meshroomProcess/*.log
+meshroomProcess/*.json
+meshroomProcess/*.onnx
+meshroomProcess/build/
+meshroomProcess/dist/
