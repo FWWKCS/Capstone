@@ -44,15 +44,17 @@ def process(input_dir):
             logging.warning("이미지 파일이 없습니다.")
             return
 
-        for img_path in enumerate(image_files, 1):
-            file_name = os.path.basename(img_path)
+        for img_path in image_files:
+            logging.debug(f"처리할 이미지: {img_path}")
+            path_str = img_path  # 경로만 추출
+            file_name = os.path.basename(path_str)
             out_path = os.path.join(rembg_dir, file_name)
 
-            logging.debug(f"배경제거 시작: {img_path}")
-            remove_background(img_path, out_path)
-            logging.debug(f"배경제거 완료: {img_path}")
+            logging.debug(f"배경제거 시작: {path_str}")
+            remove_background(path_str, out_path)  # 경로 문자열만 전달
+            logging.debug(f"배경제거 완료: {path_str}")
 
-        logging.info("배경제거 완료")
+        logging.info("모든 이미지 배경제거 완료")
 
         # Meshroom 실행
         command = [
@@ -78,4 +80,9 @@ def process(input_dir):
 
 if __name__ == "__main__":
     # 유니티에서 명령행인자 받고 프로세스 바로 수행
-    process(sys.argv[1])
+    if len(sys.argv) < 2:
+        logging.error("입력 디렉토리 경로가 제공되지 않았습니다.")
+        sys.exit(1)
+
+    input_dir = sys.argv[1]
+    process(input_dir)
