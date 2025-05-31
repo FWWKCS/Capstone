@@ -89,5 +89,5 @@ meshroomProcess/*.spec
 meshroomProcess/*.log
 meshroomProcess/*.json
 meshroomProcess/*.onnx
-meshroomProcess/build/
-meshroomProcess/dist/
+build/
+dist/
