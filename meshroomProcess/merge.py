@@ -1,45 +1,80 @@
-import os
-import trimesh
-from PIL import Image
-import imageio.v3 as iio  # imageio for .exr
+import OpenImageIO as oiio
+import numpy as np
+import re
 
-def convert_exr_to_png(exr_path, png_path):
-    img = iio.imread(exr_path)
-    # img shape: (H, W, C)
-    img_8bit = (img * 255).clip(0, 255).astype('uint8')
-    Image.fromarray(img_8bit).save(png_path)
-    print(f"Converted {exr_path} to {png_path}")
 
-def replace_mtl_texture(mtl_path, old_tex_name, new_tex_name):
-    with open(mtl_path, 'r', encoding='utf-8') as f:
-        lines = f.readlines()
+def merge_obj_mtl_png(obj_path, mtl_path, png_filename, output_obj_path):
+    # MTL 파일 읽기 및 경로 수정
+    with open(mtl_path, 'r') as f:
+        mtl_content = f.read()
 
-    with open(mtl_path, 'w', encoding='utf-8') as f:
-        for line in lines:
-            if line.strip().startswith("map_Kd") and old_tex_name in line:
-                f.write(f"map_Kd {new_tex_name}\n")
-            else:
-                f.write(line)
-    print(f"Updated MTL file: {mtl_path}")
+    # map_Kd 라인을 정확히 교체 (전체 경로 포함)
+    mtl_content = re.sub(r'map_Kd\s+.*', f'map_Kd {png_filename}', mtl_content)
 
-def merge_obj_mtl_to_glb(obj_path, output_path):
-    mesh = trimesh.load(obj_path, force='mesh')
-    mesh.export(output_path)
-    print(f"Exported to {output_path}")
+    # OBJ 파일 읽기 및 mtllib 참조 제거
+    with open(obj_path, 'r') as f:
+        obj_lines = f.readlines()
+    obj_lines = [line for line in obj_lines if not line.strip().startswith('mtllib')]
 
-# === 경로 설정 ===
-base_dir = "D:/icetea/output"
-obj_path = os.path.join(base_dir, "*.obj")
-mtl_path = os.path.join(base_dir, "*.mtl")
-exr_path = os.path.join(base_dir, "*.exr")
-png_path = os.path.join(base_dir, "texture.png")
-glb_path = os.path.join(base_dir, "final_model.glb")
+    # OBJ 내용에 mtllib 재삽입
+    obj_output = []
+    obj_output.append('# Merged OBJ + MTL\n')
+    obj_output.append('mtllib merged_materials.mtl\n')
+    obj_output.extend(obj_lines)
 
-# === 1. .exr -> .png 변환 ===
-convert_exr_to_png(exr_path, png_path)
+    # 최종 OBJ 저장
+    with open(output_obj_path, 'w') as f:
+        f.writelines(obj_output)
 
-# === 2. .mtl에서 텍스처 파일명 수정 ===
-replace_mtl_texture(mtl_path, "*.exr", "texture.png")
+    # 병합된 MTL 저장
+    with open(output_obj_path.replace('.obj', '.mtl'), 'w') as f:
+        f.write(mtl_content)
 
-# === 3. .obj 로드 및 glb로 내보내기 ===
-merge_obj_mtl_to_glb(obj_path, glb_path)
+    print(f"[OK] Merged OBJ: {output_obj_path}")
+    print(f"[OK] Merged MTL: {output_obj_path.replace('.obj', '.mtl')}")
+
+
+def exr_to_png(input_path, output_path):
+    image = oiio.ImageInput.open(input_path)
+    if not image:
+        raise RuntimeError(f"Failed to open EXR file: {input_path}")
+
+    spec = image.spec()
+    width, height = spec.width, spec.height
+    nchannels = spec.nchannels
+
+    # float 형식으로 이미지 읽기
+    data = image.read_image(format=oiio.TypeDesc("float"))
+    image.close()
+
+    # numpy로 변환 및 정규화
+    data = np.asarray(data).reshape((height, width, nchannels))
+    data = np.clip(data, 0.0, 1.0)
+    data = (data * 255).astype(np.uint8)
+
+    # 새로운 저장용 이미지 스펙 생성
+    newspec = oiio.ImageSpec(width, height, nchannels, oiio.TypeDesc("uint8"))
+
+    # PNG 저장
+    out = oiio.ImageOutput.create(output_path)
+    if not out:
+        raise RuntimeError(f"Failed to create image output: {output_path}")
+    out.open(output_path, newspec)
+    out.write_image(data)
+    out.close()
+
+
+
+# 실행 예시
+
+exr_to_png(
+    "C:/RecordedFrames/icetea/output/texture_1001.exr",
+    "C:/RecordedFrames/icetea/output/texture_1001.png"
+)
+
+merge_obj_mtl_png(
+    "C:/RecordedFrames/icetea/output/texturedMesh.obj",
+    "C:/RecordedFrames/icetea/output/texturedMesh.mtl",
+    "C:/RecordedFrames/icetea/output/texture_1001.png",
+    "C:/RecordedFrames/icetea/output/merged_mesh.obj"
+)

@@ -12,6 +12,15 @@ DBTest/[Ll]ogs/
 DBTest/[Uu]ser[Ss]ettings/
 *.log
 
+
+RunMeshroom/[Ll]ibrary/
+RunMeshroom/[Tt]emp/
+RunMeshroom/[Oo]bj/
+RunMeshroom/[Bb]uild/
+RunMeshroom/[Bb]uilds/
+RunMeshroom/[Ll]ogs/
+RunMeshroom/[Uu]ser[Ss]ettings/
+
 # MemoryCaptures can get excessive in size.
 # They also could contain extremely sensitive data
 DBTest/[Mm]emoryCaptures/
@@ -91,3 +100,10 @@ meshroomProcess/*.json
 meshroomProcess/*.onnx
 build/
 dist/
+
+
+# Obj to glb
+convertObj/*.log
+convertObj/node_modules/
+convertObj/*.exe
+convertObj/*.json

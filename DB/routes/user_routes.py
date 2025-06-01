@@ -61,22 +61,28 @@ def update_user(uid):
         return jsonify({"message": "user not found"}), 404
 
     # 수정할 필드만 업데이트
-    if "name" in data:
+    if "_name" in data:
         user.name = data["_name"]
-    if "password" in data:
+    if "_password" in data:
         user.password = data["_password"]
-    if "email" in data:
-        # 이메일 중복 체크
+    if "_email" in data:
+        print(user.email, data["_email"])
+        # 이메일 유효성 체크
+        if data["_email"] == user.email:
+            return jsonify({"warning": "Email not changed!"}), 400 # 기존 이메일
+
         existing_user = User.query.filter_by(email=data["_email"]).first()
         if existing_user and existing_user.uid != uid:
             return jsonify({"error": "Email already exists!"}), 400  # 이메일 중복
+        
+        user.email = data["_email"]
     if "_level" in data:
         user.level = data["_level"]  
-    if "exp" in data:
+    if "_exp" in data:
         user.exp = data["_exp"]
-    if "money" in data:
+    if "_money" in data:
         user.money = data["_money"]
-    if "boxSize" in data:
+    if "_boxSize" in data:
         user.boxSize = data["_boxSize"]
         
 

@@ -28,22 +28,37 @@ public class UserDBManager : MonoBehaviour
     Button _updateButton;
     Text _updateResult;
 
-    // GetAll
-    Button _getAllButton;
-    Text _getAllResult;
+    // Get
+    InputField _getInputUID;
+    InputField _getInputName;
+    InputField _getInputEmail;
+    Button _getButton;
+    Text _getResult;
 
     class CreateUserTemplate
     {
-        // public int _uid;
+        public int _uid;
         public string _name;
         public string _email;
+        public string _password;
+    }
+
+    class readUserTemplate
+    {
+        [JsonProperty("uid")]
+        public int _uid;
+        [JsonProperty("name")]
+        public string _name;
+        [JsonProperty("email")]
+        public string _email;
+        [JsonProperty("password")]
         public string _password;
     }
 
 
     class UpdateUserTemplate
     {
-        // public int _uid;
+        public int _uid;
         public string _name;
         public string _email;
         public string _password;
@@ -68,7 +83,7 @@ public class UserDBManager : MonoBehaviour
         _deleteButton.onClick.AddListener(DeleteUser);
         _deleteResult = GameObject.Find("DeleteResult").GetComponent<Text>();
 
-        // // Update
+        // Update
         _updateUID = GameObject.Find("UpdateInputUID").GetComponent<InputField>();
         _updateName = GameObject.Find("UpdateInputName").GetComponent<InputField>();
         _updateEmail = GameObject.Find("UpdateInputEmail").GetComponent<InputField>();
@@ -77,17 +92,15 @@ public class UserDBManager : MonoBehaviour
         _updateButton.onClick.AddListener(UpdateUser);
         _updateResult = GameObject.Find("UpdateResult").GetComponent<Text>();
 
-        // // GetAll
-        // _getAllButton = GameObject.Find("GetAllButton").GetComponent<Button>();
-        // _getAllButton.onClick.AddListener(GetAllObject);
-        // _getAllResult = GameObject.Find("GetAllResult").GetComponent<Text>();
+        // Get
+        _getInputUID = GameObject.Find("GetInputUID").GetComponent<InputField>();
+        _getInputName = GameObject.Find("GetInputName").GetComponent<InputField>();
+        _getInputEmail = GameObject.Find("GetInputEmail").GetComponent<InputField>();
+        _getButton = GameObject.Find("GetButton").GetComponent<Button>();
+        _getButton.onClick.AddListener(GetUser);
+        _getResult = GameObject.Find("GetResult").GetComponent<Text>();
     }
 
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
 
     async void CreateUser()
     {
@@ -118,6 +131,37 @@ public class UserDBManager : MonoBehaviour
                 _createResult.text = e.Message;
             }
         }
+    }
+
+    async void GetUser()
+    {
+        Debug.Log("GetUser 호출됨");
+        int uid = int.Parse(_getInputUID.text);
+        string url = $"http://localhost:5000/user/{uid}";
+
+        using (HttpClient client = new HttpClient())
+        {
+            try 
+            {
+                HttpResponseMessage response = await client.GetAsync(url);
+                string responseBody = await response.Content.ReadAsStringAsync();
+                _getResult.text = responseBody;
+                Debug.Log("GetUser 응답 데이터: " + responseBody);
+
+                // inputfield에 받은 데이터 넣기
+                var userData = JsonConvert.DeserializeObject<readUserTemplate>(responseBody);
+                Debug.Log($"역직렬화된 데이터 - UID: {userData._uid}, 이름: {userData._name}, 이메일: {userData._email}");
+                
+                _getInputName.text = userData._name;
+                _getInputEmail.text = userData._email;
+            }
+            catch (HttpRequestException e)
+            {
+                Debug.Log(e.Message);
+                _getResult.text = e.Message;
+            }
+        }
+
     }
 
     async void DeleteUser()
