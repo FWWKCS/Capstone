@@ -107,3 +107,9 @@ ConvertProcess/*.log
 ConvertProcess/node_modules/
 ConvertProcess/*.exe
 ConvertProcess/*.json
+
+
+
+
+# Ignore Python bytecode files
+*.spec
