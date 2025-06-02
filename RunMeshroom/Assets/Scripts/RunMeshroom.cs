@@ -1,12 +1,10 @@
 using System.Diagnostics; // Process 클래스를 사용하기 위해 필요
 using UnityEngine;
-using UnityEditor; // PrefabUtility를 사용하기 위해 필요
 using System.IO;          // 경로 조작을 위해 필요
 using System.Threading.Tasks; // async/await와 Task를 위해 필요
 using System.Collections;
-using System.Text;
-using Dummiesman;
-using System.Text.RegularExpressions;
+using UnityGLTF.Loader;
+using UnityGLTF;
 
 public class RunMeshroom : MonoBehaviour
 {
@@ -23,11 +21,14 @@ public class RunMeshroom : MonoBehaviour
     private string assetsPath = Application.dataPath;
 
     private Process meshroomProcess; // 외부 프로세스 객체
-    private StringBuilder outputBuilder = new StringBuilder();
+
+
+
 
     // Awake 또는 Start에서 바로 실행하도록 Start() 사용
     void Start()
     {
+        string oid = "test";
         localPath = Application.persistentDataPath;
         
         UnityEngine.Debug.Log($"[Unity] Assets 폴더 경로: {assetsPath}");
@@ -40,28 +41,20 @@ public class RunMeshroom : MonoBehaviour
         // Debug.Log("[Unity] persistentDataPath: " + Application.persistentDataPath);
 
         // 비동기 실행을 위한 함수 호출
-        RunMeshroomProcessAsAdminAsync();
+        RunMeshroomProcessAsAdminAsync(oid);
     }
 
     /// <summary>
     /// 메시룸 프로세스를 관리자 권한으로 비동기 실행하고 출력을 캡처하는 함수
     /// </summary>
-    public async void RunMeshroomProcessAsAdminAsync()
+    public async void RunMeshroomProcessAsAdminAsync(string oid)
     {
         string exePath = Path.Combine(localPath, "meshroom_process.exe");
         
-        string resourcesPath = Path.Combine(assetsPath, "Resources");
-
         if (!File.Exists(exePath))
         {
             UnityEngine.Debug.LogError("오류: 'meshroom_process.exe' 파일이 다음 경로에 없습니다: " + exePath);
             UnityEngine.Debug.LogError("파일을 " + localPath + " 경로에 배치해주세요.");
-            return;
-        }
-
-        if (!Directory.Exists(resourcesPath))
-        {
-            UnityEngine.Debug.LogError("오류: Resources 폴더가 다음 경로에 없습니다: " + resourcesPath);
             return;
         }
 
@@ -70,7 +63,7 @@ public class RunMeshroom : MonoBehaviour
             ProcessStartInfo startInfo = new ProcessStartInfo
             {
                 FileName = exePath,
-                Arguments = $"\"{pictSavePath}\"",  // 두 번째 매개변수로 Resources 경로 전달
+                Arguments = $"\"{pictSavePath}\" \"{oid}\"",  // 두 번째 매개변수로 Resources 경로 전달
                 UseShellExecute = true,
                 RedirectStandardOutput = false,
                 RedirectStandardError = false,
@@ -79,7 +72,7 @@ public class RunMeshroom : MonoBehaviour
                 WindowStyle = ProcessWindowStyle.Normal
             };
 
-            UnityEngine.Debug.Log($"[Unity] 실행 명령: {exePath} \"{pictSavePath}\"");
+            UnityEngine.Debug.Log($"[Unity] 실행 명령: {exePath} \"{pictSavePath}\" \"{oid}\"");
 
             meshroomProcess = Process.Start(startInfo);
             
@@ -94,21 +87,7 @@ public class RunMeshroom : MonoBehaviour
             if (meshroomProcess.ExitCode == 0)
             {
                 UnityEngine.Debug.Log("메시룸 프로세스 종료");
-                // 메시룸 완료 후에 obj 경로 탐색
-                string modelDirPath = Path.Combine(assetsPath, "Resources", "icetea");
-                string[] objFiles = Directory.GetFiles(modelDirPath, "*.obj");
-
-                if (objFiles.Length > 0)
-                {
-                    string objFilePath = objFiles[0]; // 첫 번째 .obj 사용
-                    UnityEngine.Debug.Log($"[Unity] 로드할 .obj 파일: {objFilePath}");
-                    // LoadObjAndAssignURPMaterials(objFilePath); // 런타임 오브젝트 임포팅
-
-                }
-                else
-                {
-                    UnityEngine.Debug.LogError("[Unity] obj 파일이 존재하지 않습니다.");
-                }
+                GLBLoader(oid);
             }
             else
             {
@@ -129,6 +108,15 @@ public class RunMeshroom : MonoBehaviour
         catch (System.Exception ex)
         {
             UnityEngine.Debug.LogError($"[Unity] 메시룸 프로세스 실행 실패: {ex.Message}");
+            if (meshroomProcess != null)
+            {
+                if (!meshroomProcess.HasExited)
+                {
+                    meshroomProcess.Kill();
+                }
+                meshroomProcess.Dispose();
+                meshroomProcess = null;
+            }
         }
     }
 
@@ -143,108 +131,55 @@ public class RunMeshroom : MonoBehaviour
         }
     }
 
-    private void LoadObjAndAssignURPMaterials(string objPath)
-    {
-        if (!File.Exists(objPath))
+    public void GLBLoader(string oid)
+    {   
+        // objects 폴더 경로
+        string objectsDir = Path.Combine(localPath, "objects");
+        string glbFilePath = Path.Combine(objectsDir, $"{oid}.glb");
+
+        UnityEngine.Debug.Log($"[Unity] 로드할 .glb 파일: {glbFilePath}");
+
+        if (!Directory.Exists(objectsDir))
         {
-            UnityEngine.Debug.LogError("[OBJ DEBUG] .obj 파일이 존재하지 않습니다: " + objPath);
+            UnityEngine.Debug.LogError("[Unity] objects 디렉토리를 찾을 수 없습니다: " + objectsDir);
             return;
         }
 
-        string originalDir = Directory.GetCurrentDirectory();
-        string objDir = Path.GetDirectoryName(objPath);
-        Directory.SetCurrentDirectory(objDir);
-
-        GameObject loadedObj = null;
-        try
+        if (!File.Exists(glbFilePath))
         {
-            loadedObj = new OBJLoader().Load(objPath);
-        }
-        catch (System.Exception ex)
-        {
-            UnityEngine.Debug.LogError($"[OBJ DEBUG] 로딩 중 예외 발생: {ex.Message}");
-        }
-        finally
-        {
-            Directory.SetCurrentDirectory(originalDir);
-        }
-
-        if (loadedObj == null)
-        {
-            UnityEngine.Debug.LogError("[OBJ DEBUG] Load 실패 - GameObject null");
+            UnityEngine.Debug.LogError("[Unity] GLB 파일이 존재하지 않습니다: " + glbFilePath);
             return;
         }
 
-        loadedObj.transform.position = Vector3.zero;
-        loadedObj.name = "ImportedMesh";
-
-        Shader urpShader = Shader.Find("Universal Render Pipeline/Lit");
-        if (urpShader == null)
-        {
-            UnityEngine.Debug.LogError("[OBJ DEBUG] URP/Lit 셰이더를 찾을 수 없습니다.");
-            return;
-        }
-
-        Renderer[] renderers = loadedObj.GetComponentsInChildren<Renderer>();
-        foreach (Renderer renderer in renderers)
-        {
-            Material[] newMaterials = new Material[renderer.sharedMaterials.Length];
-
-            for (int i = 0; i < renderer.sharedMaterials.Length; i++)
-            {
-                Material oldMat = renderer.sharedMaterials[i];
-                if (oldMat == null)
-                {
-                    UnityEngine.Debug.LogWarning("[OBJ DEBUG] null 머티리얼 감지");
-                    continue;
-                }
-
-                // material_{숫자} 이름에서 숫자 추출
-                Match match = Regex.Match(oldMat.name, @"material_(\d+)");
-                if (!match.Success)
-                {
-                    UnityEngine.Debug.LogWarning($"[OBJ DEBUG] 머티리얼 이름이 형식과 다름: {oldMat.name}");
-                    continue;
-                }
-
-                string id = match.Groups[1].Value;
-                string texturePath = Path.Combine(objDir, $"texture_{id}.png");
-
-                Material newMat = new Material(urpShader);
-                newMat.name = $"material_{id}_URP";
-
-                // 1. 텍스처 로드 및 Base Map 설정
-                if (File.Exists(texturePath))
-                {
-                    byte[] texBytes = File.ReadAllBytes(texturePath);
-                    Texture2D tex = new Texture2D(2, 2);
-                    tex.LoadImage(texBytes);
-                    newMat.SetTexture("_BaseMap", tex);
-                    UnityEngine.Debug.Log($"[OBJ DEBUG] 텍스처 적용 완료: texture_{id}.png");
-                }
-                else
-                {
-                    UnityEngine.Debug.LogWarning($"[OBJ DEBUG] 텍스처 파일이 존재하지 않음: texture_{id}.png");
-                }
-
-                // 2. Base Color를 완전 흰색으로 설정
-                if (newMat.HasProperty("_BaseColor"))
-                {
-                    newMat.SetColor("_BaseColor", Color.white);
-                }
-
-                // 3. Smoothness = 0.0으로 설정
-                if (newMat.HasProperty("_Smoothness"))
-                {
-                    newMat.SetFloat("_Smoothness", 0.0f);
-                }
-
-                newMaterials[i] = newMat;
-            }
-
-            renderer.sharedMaterials = newMaterials;
-        }
-
-        UnityEngine.Debug.Log("[OBJ DEBUG] OBJ 로드 및 머티리얼 설정 완료");
+        // GLB 로딩은 코루틴으로 비동기 실행 권장
+        StartCoroutine(LoadGLBModelCoroutine(glbFilePath));
     }
+
+    private IEnumerator LoadGLBModelCoroutine(string glbFilePath)
+    {
+        var loader = new FileLoader(Path.GetDirectoryName(glbFilePath));
+        var importer = new GLTFSceneImporter(
+            Path.GetFileName(glbFilePath),
+            new ImportOptions { DataLoader = loader }
+        );
+        importer.SceneParent = new GameObject("LoadedGLB").transform;
+
+        UnityEngine.Debug.Log("GLB 로딩 시작: " + glbFilePath);
+
+        var loadSceneTask = importer.LoadSceneAsync();
+        while (!loadSceneTask.IsCompleted)
+        {
+            yield return null;
+        }
+
+        if (loadSceneTask.Exception != null)
+        {
+            UnityEngine.Debug.LogError("GLB 로딩 실패: " + loadSceneTask.Exception.Message);
+        }
+        else
+        {
+            UnityEngine.Debug.Log("GLB 로딩 완료");
+        }
+    }
+
 }

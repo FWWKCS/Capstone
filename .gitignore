@@ -103,7 +103,7 @@ dist/
 
 
 # Obj to glb
-convertObj/*.log
-convertObj/node_modules/
-convertObj/*.exe
-convertObj/*.json
+ConvertProcess/*.log
+ConvertProcess/node_modules/
+ConvertProcess/*.exe
+ConvertProcess/*.json

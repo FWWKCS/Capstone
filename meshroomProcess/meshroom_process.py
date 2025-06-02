@@ -7,13 +7,13 @@ from PIL import Image
 import numpy as np
 from pathlib import Path
 import shutil
-import trimesh
+
 
 # 실행 경로 설정
 exe_dir = Path(sys.executable).parent if getattr(sys, 'frozen', False) else Path(__file__).parent
 meshroom_path = exe_dir / "Meshroom" / "meshroom_batch.exe"
 graph_path = exe_dir / "Meshroom" / "custom_graph.mg"
-glb_path = exe_dir / "objects"
+glb_dir = exe_dir / "objects"
 
 # === 로깅 설정: app.log는 상세하게, stdout은 간결하게 ===
 root_logger = logging.getLogger()
@@ -30,7 +30,7 @@ file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(mes
 root_logger.addHandler(file_handler)
 
 
-# --- 중요: Meshroom을 위한 임시 디렉토리 환경 변수 설정 ---
+# Meshroom을 위한 임시 디렉토리 환경 변수 설정
 meshroom_env = os.environ.copy()
 custom_meshroom_temp_path = exe_dir / "MeshroomTemp"
 if not custom_meshroom_temp_path.exists():
@@ -40,7 +40,7 @@ if not custom_meshroom_temp_path.exists():
 meshroom_env["TEMP"] = str(custom_meshroom_temp_path)
 meshroom_env["TMP"] = str(custom_meshroom_temp_path)
 logging.info(f"Meshroom 프로세스에 TEMP/TMP 환경 변수 설정: {custom_meshroom_temp_path}")
-# ----------------------------------------------------------
+
 
 # === 완전 검은 이미지 판별 함수 ===
 def is_black_image(image_path: Path, threshold=5):
@@ -73,37 +73,35 @@ def remove_background(input_file: Path, output_file: Path, brightness_threshold=
         logging.warning(f"배경 제거 실패: {input_file} - {e}")
 
 
-def convertObj_to_glb(output_dir):
-    exe_dir = Path(sys.executable).parent
+def convert_obj_to_glb(output_dir, oid):
     # exe_dir / "objects" 디렉토리가 없으면 생성
-    objects_dir = exe_dir / "objects"
-    if not objects_dir.exists():
-        objects_dir.mkdir(parents=True)
+    if not glb_dir.exists():
+        glb_dir.mkdir(parents=True)
 
-    # obj2gltf_runner exe 호출, 이때 obj,mtl,png 파일이 있는 경로를 인자로 전달(output_dir)
-    converter_exe = exe_dir / "obj2gltf_runner.exe"
+    # convert_process.exe 호출, 이때 obj,mtl,png 파일이 있는 경로를 인자로 전달(output_dir)
+    converter_exe = exe_dir / "convert_process.exe"
     if not converter_exe.exists():
         raise FileNotFoundError(f"변환기 exe를 찾을 수 없습니다: {converter_exe}")
 
     CREATE_NO_WINDOW = 0x08000000  # 윈도우용 콘솔창 숨김 플래그
 
-    # obj2gltf_runner.exe 실행 (output_dir 경로 인자로 전달)
+    # convert_process.exe 실행 (/objects 경로 인자로 전달)
     result = subprocess.run(
-        [str(converter_exe), str(output_dir)],
+        [str(converter_exe), str(output_dir), str(glb_dir), str(oid)],
         capture_output=True,
         text=True,
-        creationflags=CREATE_NO_WINDOW
+        creationflags=CREATE_NO_WINDOW,
     )
-    print(result.stdout)
+    logging.info(result.stdout)
     if result.returncode != 0:
-        print("변환 실패:", result.stderr)
+        logging.error(f"변환 실패: {result.stderr}")
         return
-    print("변환 성공:", result.stdout)
+    logging.info(f"변환 종료: {result.stdout}")
 
 
 
 # === 전체 프로세스 처리 함수 ===
-def process(input_dir: Path):
+def process(input_dir: Path, oid):
     logging.info("프로세스 시작")
     logging.info(f"입력 디렉토리: {input_dir}")
 
@@ -114,11 +112,14 @@ def process(input_dir: Path):
         # 디렉토리 생성 (기존 폴더 제거 후 생성)
         if rembg_dir.exists():
             shutil.rmtree(rembg_dir)
+            # pass
         if output_dir.exists():
             shutil.rmtree(output_dir)
+            # pass
 
         rembg_dir.mkdir(parents=True, exist_ok=False)
         output_dir.mkdir(parents=True, exist_ok=False)
+
 
         image_files = list(input_dir.glob("*.jpg"))
         if not image_files:
@@ -176,14 +177,14 @@ def process(input_dir: Path):
             logging.error(f"Meshroom 실행 실패 (반환 코드: {meshroom_result.returncode}). 자세한 내용은 위의 Meshroom 출력을 확인하세요.")
         else:
             logging.info("3D 모델링 완료")
-            convertObj_to_glb(output_dir)
+            logging.info("GLB 파일로 변환 시작")
+            # GLB 변환 함수 호출
+            logging.info(f"convert_obj_to_glb() 호출 - output_dir: {output_dir}, oid: {oid}")
+            convert_obj_to_glb(output_dir, oid)
 
 
     except FileNotFoundError as e:
         logging.error(f"파일을 찾을 수 없습니다: {e}", exc_info=True)
-
-    except FileNotFoundError as e:
-        logging.error(f"파일을 찾을 수 없습니다: {e}")
 
     except FileExistsError as e:
         logging.error(f"파일이 이미 존재합니다: {e}")
@@ -198,15 +199,22 @@ def process(input_dir: Path):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
+    if len(sys.argv) < 3:
         logging.error("입력 디렉토리 경로와 Unity 프로젝트 경로를 인자로 전달해야 합니다.")
         sys.exit(1)
 
     input_dir = Path(sys.argv[1])
-
+    logging.info(f"사진 입력 디렉토리: {input_dir}")
     if not input_dir.exists():
         logging.error(f"입력 디렉토리가 존재하지 않습니다: {input_dir}")
         sys.exit(1)
 
-    process(input_dir)
+    oid = sys.argv[2]
+    logging.info(f"서버 디렉토리에 저장될 오브젝트 파일명: {oid}")
+    if not oid:
+        logging.error("오브젝트 파일명을 지정해야 합니다.")
+        sys.exit(1)
+
+
+    process(input_dir, oid)
 
