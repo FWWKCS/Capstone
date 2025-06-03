@@ -112,13 +112,12 @@ def process(input_dir: Path, oid):
         # 디렉토리 생성 (기존 폴더 제거 후 생성)
         if rembg_dir.exists():
             shutil.rmtree(rembg_dir)
-            # pass
         if output_dir.exists():
             shutil.rmtree(output_dir)
-            # pass
+     
 
-        rembg_dir.mkdir(parents=True, exist_ok=False)
-        output_dir.mkdir(parents=True, exist_ok=False)
+        rembg_dir.mkdir(parents=True, exist_ok=True)
+        output_dir.mkdir(parents=True, exist_ok=True)
 
 
         image_files = list(input_dir.glob("*.jpg"))
