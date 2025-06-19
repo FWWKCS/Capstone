@@ -3,6 +3,7 @@ from extensions import db
 class Instance(db.Model):
     __tablename__ = 'instance'
 
+    id = db.Column(db.Integer, primary_key=True)
     oid = db.Column(db.Integer, primary_key=True)
     uid = db.Column(db.Integer, db.ForeignKey('user.uid', ondelete='CASCADE'), nullable=False)
     bigClass = db.Column(db.String(20), nullable=False)
