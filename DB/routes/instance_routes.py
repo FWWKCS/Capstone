@@ -1,17 +1,19 @@
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, send_file, request, jsonify, current_app, send_from_directory, abort
 from models import Instance
 from extensions import db
 import os
 
 instance_bp = Blueprint("instance", __name__, url_prefix="/instance")
+UPLOAD_FOLDER = './uploads'
 
 # 오브젝트 정보 생성
 @instance_bp.route("/create", methods=["POST"])
 def create_instance():
     data = request.get_json()
     new_instance = Instance(
+        oid=data["oid"],
         uid=data["uid"],
-        name=data["name"],
+        # name=data["name"],
         bigClass=data["bigClass"],
         smallClass=data["smallClass"],
         abilityType=data["abilityType"],
@@ -26,37 +28,42 @@ def create_instance():
     db.session.add(new_instance)
     db.session.commit()
 
-    # 추가된 db 정보의 oid 가져오기
-    oid = new_instance.oid
-
     # 인스턴스의 oid 반환
-    return jsonify({"oid":str(oid)}), 201
+    return jsonify({"message": "object saved"}), 201
 
-# fbx 파일 업로드
+# glb 파일 저장
 @instance_bp.route('/upload', methods=['POST'])
-def upload_fbx():
+def upload_file():
     if 'file' not in request.files:
-        return jsonify({'error': 'No file part'}), 400
-    
-    file = request.files['file']
-    
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
-    
-    if not file.filename.lower().endswith('.fbx'):
-        return jsonify({'error': 'Only FBX files are allowed'}), 400
+        return jsonify({"error": "No file part"}), 400
 
-    # 현재 Flask 앱의 설정에서 업로드 경로를 읽어옴
-    upload_path = current_app.config['UPLOAD_FOLDER']
-    
-    save_path = os.path.join(upload_path, file.filename)
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+
+    save_path = os.path.join(UPLOAD_FOLDER, file.filename)
     file.save(save_path)
 
-    return jsonify({'message': 'File uploaded successfully'}), 200
+    return jsonify({"message": "File uploaded", "filename": file.filename}), 200
+
+
+# glb 파일 전송
+# 요청을 보낸 대상에게 oid에 해당하는 glb파일 전송
+# 파일 경로는 DB서버에서 DB/uploads/{oid}.glb
+# glb 파일 전송
+@instance_bp.route("/download/<int:oid>", methods=["GET"])
+def download_file(oid):
+    filename = f"{oid}.glb"
+    file_path = os.path.join(UPLOAD_FOLDER, filename)
+
+    if not os.path.exists(file_path):
+        return abort(404, description=f"File {filename} not found.")
+
+    return send_from_directory(directory=UPLOAD_FOLDER, path=filename, as_attachment=True, mimetype="model/gltf-binary")
 
 
 # 오브젝트 정보 조회
-@instance_bp.route('/instances/<int:oid>', methods=['GET'])
+@instance_bp.route('/<int:oid>', methods=['GET'])
 def get_instance(oid):
     instance = Instance.get_by_id(oid)
     if not instance:
@@ -76,7 +83,7 @@ def get_instance(oid):
     })
 
 # 오브젝트 정보 수정
-@instance_bp.route('/instances/<int:oid>', methods=['PUT'])
+@instance_bp.route('/<int:oid>', methods=['PUT'])
 def update_instance(oid):
     instance = Instance.get_by_id(oid)
     if not instance:
@@ -111,7 +118,7 @@ def update_instance(oid):
     return jsonify({'message': 'Instance updated successfully'})
 
 # 오브젝트 정보 삭제
-@instance_bp.route('/instances/<int:oid>', methods=['DELETE'])
+@instance_bp.route('/<int:oid>', methods=['DELETE'])
 def delete_instance(oid):
     instance = Instance.get_by_id(oid)
     if not instance:

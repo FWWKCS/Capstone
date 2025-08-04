@@ -9,7 +9,7 @@ import os
 app = Flask(__name__)
 
 # 업로드 디렉토리 경로 설정
-app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads', 'fbx_files')
+app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
 
 # 디렉토리 경로가 없으면 생성
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
