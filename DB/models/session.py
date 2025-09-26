@@ -7,5 +7,5 @@ class Session(db.Model):
 
     sid = db.Column(db.String(255), primary_key=True)
     uid = db.Column(db.Integer, db.ForeignKey('user.uid'), nullable=False)
-    expire = db.Column(db.Date, nullable=False)
+    expire = db.Column(db.DateTime, nullable=False)
     
