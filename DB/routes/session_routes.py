@@ -25,14 +25,21 @@ def create_session():
     return jsonify({"message": "user created"}), 201
 
 # 세션 조회
-@session_bp.route("/<int:uid>", methods=["GET"])
-def get_session(uid):
-    session = Session.query.get(uid)
-    if not session:
-        return jsonify({"message": "session not found"}), 404
+# TODO: DB로 요청하는 경로에 대하여 세션을 조회할 것
+# json을 받는 형태로 변경
+@session_bp.route("/view", methods=["GET"])
+def get_session():
+    data = request.get_json()
+    uid = data['uid']
+    sid = data['sid']
 
+    session = Session.query.filter_by(uid=uid, sid=sid).first()
+    if not session:
+        return jsonify({"message": "Invalid access"}), 403
+    
     session_data = {
         "uid": session.uid,
+        "sid" : session.sid,
         "expire": session.expire.isoformat()  # datetime 객체를 ISO 형식으로 변환
     }
     return jsonify(session_data), 200
