@@ -89,6 +89,7 @@ crashlytics-build.properties
 config.py
 
 # DB optional
+uploads/
 migrations/
 venv/
 __pycache__/
