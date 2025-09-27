@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from models import User, Session
+from models import User, Session, Instance
 from extensions import db
 from datetime import datetime, timedelta, time
 
@@ -133,6 +133,11 @@ def login():
         db.session.add(new_session)
         db.session.commit()
 
+        instances = Instance.query.filter_by(uid=uid).all()
+        oid_list = []
+        for instance in instances:
+            oid_list.append(instance.oid)
+
         # 추가한 정보 기반 반환
         return jsonify({
             'success' : 'true',
@@ -142,7 +147,8 @@ def login():
             'level' : result.uid,
             'exp' : result.exp,
             'money' : result.money,
-            'box_size' : result.boxSize
+            'box_size' : result.boxSize,
+            'oid' : oid_list
         })
     
     return jsonify({
