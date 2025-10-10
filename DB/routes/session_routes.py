@@ -32,6 +32,7 @@ def get_session():
     data = request.get_json()
     uid = data['uid']
     sid = data['sid']
+    print(uid, sid)
 
     session = Session.query.filter_by(uid=uid, sid=sid).first()
     if not session:

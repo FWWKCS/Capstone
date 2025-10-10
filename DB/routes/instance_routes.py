@@ -92,25 +92,25 @@ def update_instance(oid):
     data = request.get_json()
     
     # 수정할 필드만 업데이트
-    if 'uid' in data:
+    if 'uid' in data and data['uid'] is not None:
         instance.uid = data['uid']
-    if 'name' in data:
+    if 'name' in data and data['name'] is not None:
         instance.name = data['name']
-    if 'bigClass' in data:
+    if 'bigClass' in data and data['bigClass'] is not None:
         instance.bigClass = data['bigClass']
-    if 'smallClass' in data:
+    if 'smallClass' in data and data['smallClass'] is not None:
         instance.smallClass = data['smallClass']
-    if 'abilityType' in data:
+    if 'abilityType' in data and data['abilityType'] is not None:
         instance.abilityType = data['abilityType']
-    if 'sellState' in data:
+    if 'sellState' in data and data['sellState'] is not None:
         instance.sellState = data['sellState']
-    if 'cost' in data:
+    if 'cost' in data and data['cost'] is not None:
         instance.cost = data['cost']
-    if 'expireCount' in data:
+    if 'expireCount' in data and data['expireCount'] is not None:
         instance.expireCount = data['expireCount']
-    if 'stat' in data:
+    if 'stat' in data and data['stat'] is not None:
         instance.stat = data['stat']
-    if 'grade' in data:
+    if 'grade' in data and data['grade'] is not None:
         instance.grade = data['grade']
 
     db.session.commit()

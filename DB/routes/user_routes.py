@@ -5,10 +5,6 @@ from datetime import datetime, timedelta, time
 
 user_bp = Blueprint("user", __name__, url_prefix="/user")
 
-# 테이블 이름 넣기
-userDbTableName = 'capstone_db.user'
-sessionDbTableName = 'capstone_db.session'
-
 # 사용자 생성
 # @user_bp.route("/create", methods=["POST"])
 # def create_user():
@@ -103,16 +99,18 @@ OUTPUT : success(성공 여부), sid(세션 ID), expire(세션 만료 시간), u
 '''
 @user_bp.route('/login', methods=['POST'])
 def login():
-    # conn = db.connection.cursor()
     data = request.get_json()
-    # name = data['name']
-    # password_hash = data['password_hash']
-    # conn.execute("SELECT * FROM %s WHERE name=%s AND password_hash=%s", (userDbTableName, name, password_hash))
-    # result = conn.fetchone()
+    name = data['id']
+    password_hash = data['password_hash']
 
-    result = User.query.filter_by(name=data['id'], password_hash=data['password_hash']).first()
+    result = User.query.filter_by(name=name, password_hash=password_hash).first()
     if (result):
         uid = result.uid
+
+        # 세션에 이미 존재하면 기존정보 삭제
+        Session.query.filter_by(uid=uid).delete()
+        db.session.commit()
+
         # sid는 해시값 이용 ex) 현재시간+uid 등..
         # uid는 위에 execute에서 SELECT로 가져와서 넣으면 베스트
         # expire는 현재 시간 + 30분
@@ -170,19 +168,21 @@ OUTPUT : success(성공 여부)
 def logout():
     # conn = db.connection.cursor()
     data = request.get_json()
+    uid = data['uid']
+    sid = data['sid']
     # sid = data['sid']
     # Session DB에서 로그인 정보 삭제
     # conn.execute("DELETE FROM %s WHERE sid=%s", (sessionDbTableName, sid))
     # conn.commit()
-    session = Session.query.filter_by(sid=data['sid']).first()
-    if (session):
-        db.session.delete(session)
-        db.session.commit()
-        return jsonify({'success' : 'true'}), 200
-    
-    else:
-        return jsonify({'success' : 'false'})
 
+    session = Session.query.filter_by(uid=uid, sid=sid).first()
+    if not session:
+        return jsonify({"message": "Invalid access"}), 403
+
+    db.session.delete(session)
+    db.session.commit()
+    return jsonify({'success' : 'true'}), 200
+    
 
 # 기타 추가 로직
 '''

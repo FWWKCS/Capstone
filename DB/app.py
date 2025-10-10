@@ -2,7 +2,7 @@ from flask import Flask
 from extensions import db
 from config import DB_USERNAME, DB_PASSWORD, DB_HOST, DB_NAME, DB_PORT
 from flask_migrate import Migrate
-from routes import user_routes, session_routes, cache_routes, instance_routes
+from routes import user_routes, session_routes, cache_routes, instance_routes, shop_routes
 import models
 import os
 
@@ -36,6 +36,7 @@ app.register_blueprint(user_routes.user_bp)
 app.register_blueprint(session_routes.session_bp)
 app.register_blueprint(cache_routes.cache_bp)
 app.register_blueprint(instance_routes.instance_bp)
+app.register_blueprint(shop_routes.shop_bp)
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -1,4 +1,5 @@
 from extensions import db
+from sqlalchemy.orm import validates
 
 class Instance(db.Model):
     __tablename__ = 'instance'
@@ -47,3 +48,9 @@ class Instance(db.Model):
         db.session.delete(instance)
         db.session.commit()
         return instance
+    
+    @validates("sellState")
+    def validate_sellState(self, key, value):
+        if isinstance(value, str):
+            return value.lower() in ("true", "1", "y", "yes", "on")
+        return bool(value)
