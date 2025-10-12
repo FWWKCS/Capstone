@@ -90,10 +90,11 @@ def update_instance(oid):
         return jsonify({'error': 'Not found'}), 404
     
     data = request.get_json()
+    print(data)
     
     # 수정할 필드만 업데이트
     if 'uid' in data and data['uid'] is not None:
-        instance.uid = data['uid']
+        instance.uid = int(data['uid'])
     if 'name' in data and data['name'] is not None:
         instance.name = data['name']
     if 'bigClass' in data and data['bigClass'] is not None:
@@ -105,11 +106,11 @@ def update_instance(oid):
     if 'sellState' in data and data['sellState'] is not None:
         instance.sellState = data['sellState']
     if 'cost' in data and data['cost'] is not None:
-        instance.cost = data['cost']
+        instance.cost = int(data['cost'])
     if 'expireCount' in data and data['expireCount'] is not None:
         instance.expireCount = data['expireCount']
     if 'stat' in data and data['stat'] is not None:
-        instance.stat = data['stat']
+        instance.stat = int(data['stat'])
     if 'grade' in data and data['grade'] is not None:
         instance.grade = data['grade']
 
@@ -128,3 +129,20 @@ def delete_instance(oid):
     db.session.commit()
 
     return jsonify({'message': 'Instance deleted successfully'})
+
+
+
+
+@instance_bp.route('/list/<int:uid>', methods=['GET'])
+def get_user_instance_list(uid):
+    items = Instance.query.filter_by(uid=uid).all()
+    # 필요한 필드만 추출
+    try:
+        data = [item.oid for item in items]
+
+        return jsonify({"success": True, "oid": data}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
+
