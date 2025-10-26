@@ -90,6 +90,7 @@ config.py
 
 # DB optional
 uploads/
+images/
 migrations/
 venv/
 __pycache__/

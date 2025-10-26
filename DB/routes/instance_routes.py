@@ -4,7 +4,8 @@ from extensions import db
 import os
 
 instance_bp = Blueprint("instance", __name__, url_prefix="/instance")
-UPLOAD_FOLDER = './uploads'
+UPLOAD_FILE_FOLDER = './uploads'
+UPLOAD_IMG_FOLDER = './images'
 
 # 오브젝트 정보 생성
 @instance_bp.route("/create", methods=["POST"])
@@ -32,8 +33,8 @@ def create_instance():
     return jsonify({"message": "object saved"}), 201
 
 # glb 파일 저장
-@instance_bp.route('/upload', methods=['POST'])
-def upload_file():
+@instance_bp.route('/upload/file', methods=['POST'])
+def import_file():
     if 'file' not in request.files:
         return jsonify({"error": "No file part"}), 400
 
@@ -41,7 +42,7 @@ def upload_file():
     if file.filename == '':
         return jsonify({"error": "No selected file"}), 400
 
-    save_path = os.path.join(UPLOAD_FOLDER, file.filename)
+    save_path = os.path.join(UPLOAD_FILE_FOLDER, file.filename)
     file.save(save_path)
 
     return jsonify({"message": "File uploaded", "filename": file.filename}), 200
@@ -51,15 +52,45 @@ def upload_file():
 # 요청을 보낸 대상에게 oid에 해당하는 glb파일 전송
 # 파일 경로는 DB서버에서 DB/uploads/{oid}.glb
 # glb 파일 전송
-@instance_bp.route("/download/<int:oid>", methods=["GET"])
-def download_file(oid):
+@instance_bp.route("/download/file/<int:oid>", methods=["GET"])
+def export_file(oid):
     filename = f"{oid}.glb"
-    file_path = os.path.join(UPLOAD_FOLDER, filename)
+    file_path = os.path.join(UPLOAD_FILE_FOLDER, filename)
 
     if not os.path.exists(file_path):
         return abort(404, description=f"File {filename} not found.")
 
-    return send_from_directory(directory=UPLOAD_FOLDER, path=filename, as_attachment=True, mimetype="model/gltf-binary")
+    return send_from_directory(directory=UPLOAD_FILE_FOLDER, path=filename, as_attachment=True, mimetype="model/gltf-binary")
+
+
+# 생성된 물체 사진 이미지 저장
+@instance_bp.route('/upload/img', methods=['POST'])
+def import_img():
+    if 'file' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "No selected Imgae"}), 400
+
+    save_path = os.path.join(UPLOAD_IMG_FOLDER, file.filename)
+    file.save(save_path)
+
+    return jsonify({"message": "File uploaded", "filename": file.filename}), 200
+
+
+# 생성된 물체 사진 이미지 전송
+# 파일 경로는 DB서버에서 DB/imgs/{oid}.jpg
+@instance_bp.route("/download/img/<int:oid>", methods=["GET"])
+def export_img(oid):
+    filename = f"{oid}.jpg"
+    file_path = os.path.join(UPLOAD_IMG_FOLDER, filename)
+
+    if not os.path.exists(file_path):
+        return abort(404, description=f"Image {filename} not found.")
+
+    return send_from_directory(directory=UPLOAD_IMG_FOLDER, path=filename, as_attachment=True, mimetype="image/jpeg")
+
 
 
 # 오브젝트 정보 조회
