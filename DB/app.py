@@ -39,4 +39,4 @@ app.register_blueprint(instance_routes.instance_bp)
 app.register_blueprint(shop_routes.shop_bp)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)

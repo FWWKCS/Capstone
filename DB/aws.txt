@@ -1,0 +1,16 @@
+aws 
+
+ip: 54.180.205.33:5000
+
+id: root
+pw: capstone
+
+id: user
+pw: capstone
+
+
+
+
+https://www.realorfake.store
+
+sudo journalctl -u flaskapp.service -f
